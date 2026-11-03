@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: finn
+    runtime: docker
+    plan: free
+    region: singapore          # nearest Render region to NSE/BSE and screener.in
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY      # cheap tier: triage and extraction
+        sync: false
+      - key: ANTHROPIC_API_KEY   # strong tier: the Promise Ledger
+        sync: false
+      - key: TAVILY_API_KEY      # leadership-change bios
+        sync: false
