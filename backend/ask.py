@@ -69,7 +69,10 @@ def ask(symbol: str, question: str) -> dict:
         elif i in num_map:
             cites.append({"id": i, "kind": "number", "text": num_map[i]})
     answerable = out.get("answerable", False)
-    text = re.sub(r"\s*\((?:[cn]\d+(?:,\s*)?)+\)", "", out.get("answer", "")).strip()  # ids render as receipts below
+    # ids render as receipts below, so strip them from the prose: "(c17)", "(c3, n2)", "(6.5% CAGR, n7)"
+    text = re.sub(r"(?:,\s*|\s*;\s*|\s+)?\b[cn]\d{1,3}\b", "", out.get("answer", ""))
+    text = re.sub(r"\(\s*[,;]?\s*\)", "", text)
+    text = re.sub(r"\s+([.,;)])", r"\1", text).strip()
     return {"answerable": answerable, "answer": text, "cites": cites if answerable else [], "model": meta.get("model")}
 
 
