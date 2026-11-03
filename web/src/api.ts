@@ -67,11 +67,18 @@ export interface Vitals {
   shareholding: { periods: string[]; promoters: (number | null)[] }
   flags: { tone: 'good' | 'bad'; text: string }[]
 }
-export interface Dossier { status: 'ready' | 'building'; vitals: Vitals | null; ledger?: Ledger }
+export interface Dossier { status: 'ready' | 'building'; vitals: Vitals | null; ledger?: Ledger; questions?: string[] }
+
+export interface Answer {
+  answerable: boolean; answer: string
+  cites: ({ id: string; kind: 'claim'; fq: string; page: number; url: string; source_kind?: string; quote: string }
+    | { id: string; kind: 'number'; text: string })[]
+}
 
 export interface Company {
   symbol: string; name: string; sector: string | null; weight: number | null
   has_ledger: boolean; tally: Partial<Record<Verdict, number>>; headline: string | null
+  price: number | null; ret: number | null; date: string | null
 }
 export interface Rule {
   id: string; kind: 'price_move' | 'volume_spike' | 'filing'; scope: string; threshold?: number
@@ -92,6 +99,13 @@ export const api = {
   dossier: (symbol: string) => get<Dossier>(`/api/dossier/${encodeURIComponent(symbol)}`),
   companies: () => get<Company[]>('/api/companies'),
   rules: () => get<Rule[]>('/api/rules'),
+  ask: async (symbol: string, q: string): Promise<Answer> => {
+    const r = await fetch(`/api/ask/${encodeURIComponent(symbol)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }),
+    })
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `Request failed (${r.status})`)
+    return r.json()
+  },
   saveRule: (r: Rule) =>
     fetch(`/api/rules/${r.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(r) })
       .then(x => x.json() as Promise<Rule>),

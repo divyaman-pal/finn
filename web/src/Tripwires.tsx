@@ -23,7 +23,7 @@ export function Tripwires() {
   return (
     <>
       <header className="mast">
-        <div className="mast-top"><span className="wordmark">FIN<i>N</i></span><span className="small muted">Tripwires</span></div>
+        <div className="mast-top"><span className="wordmark">FIN<i>N</i></span><span className="small muted">Alerts</span></div>
         <h1>Interrupt me only if<em>…</em></h1>
         <div className="mast-sub">You decide what "unusual" means. Everything else waits for the Brief.</div>
       </header>

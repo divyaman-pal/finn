@@ -6,7 +6,7 @@ A mobile-first agent for a public-markets investor, built for the ENAM Holdings 
 
 FINN does two things, and both run on one idea: **management makes promises; FINN checks them.**
 
-| | **Brief** (push) | **Dossier** (pull) |
+| | **Brief** (push) | **Research** (pull) |
 |---|---|---|
 | When | Every day, for your book of 16 stocks | On demand, for **any NSE ticker** |
 | Shows | The 3–8 things that matter in a window you pick; everything else filed away | Promise Ledger, Vitals, Bull vs Bear — each claim linked to its page in the source |
@@ -14,9 +14,9 @@ FINN does two things, and both run on one idea: **management makes promises; FIN
 
 ## What it looks like
 
-- **Brief** — "Five things matter." A masthead count, a strip of today's moves across the book, ranked story cards, and a "filed away" drawer for routine paperwork. Tap a story for the numbers: Revenue, EBITDA, PBT, PAT, QoQ and YoY, read from the actual results filing and reconciled against reported figures; then the **Promise check**; then how the market took it.
-- **Ledger** — search any NSE symbol. A company never seen before builds in ~2 minutes from its filings. Each thread traces a promise call by call, with the verbatim quote and a link to the page.
-- **Tripwires** — alert rules written as sentences: *When [any small cap ▾] moves more than [− ±3% +] in a day.*
+- **Brief** — "Five things matter." A search box for any company, a strip of today's moves across the book, filter chips (Results / Leadership / Legal / Moves…), ranked story cards, and a "filed away" drawer for routine paperwork. Tap a story for the numbers: Revenue, EBITDA, PBT, PAT, QoQ and YoY, read from the actual results filing and reconciled against reported figures; then the **Promise check**; then how the market took it.
+- **Research** — your portfolio with prices, day moves and each company's promise record; search any NSE symbol (a company never seen before builds in ~2 minutes from its filings). Each company page has the Promise Ledger (every promise traced call by call, verbatim quote and page link), Vitals, Bull vs Bear, and **Ask**: questions answered only from that company's own calls and numbers, with receipts.
+- **Alerts** — rules written as sentences: *When [any small cap ▾] moves more than [− ±3% +] in a day.*
 
 ## Architecture
 
@@ -45,6 +45,7 @@ screener.in ───────┘     │     (3 routes, cheapest     └─ 
 |---|---|---|---|
 | Filing triage, claim extraction, results numbers, bios | Gemini Flash-Lite (free tier) | ~93% | ~$0.27 at list price, ₹0 actual |
 | Promise Ledger + bull/bear (one call per company) | Claude Opus 5.5 | ~7% | ~$0.085 per company |
+| Ask (per question, grounded in extracted claims + numbers) | Claude Haiku 5.5 → Flash-Lite | small | ~$0.002 per question |
 | Signal score, Vitals, QoQ/YoY, reconciliation, quote checks | Python | — | 0 |
 
 Every model call is cached on a hash of its input, so nothing is read twice. Fallback chains keep the app working:

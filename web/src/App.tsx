@@ -5,7 +5,8 @@ import { Dossier } from './Dossier'
 import { Tripwires } from './Tripwires'
 import { Icon } from './ui'
 
-// Hash routes keep deep links working on any static host: #/  #/ledger  #/co/INFY  #/wires
+// Hash routes keep deep links working on any static host: #/  #/research  #/co/INFY  #/alerts
+// (#/ledger and #/wires are the old names, kept so earlier links still work)
 const route = () => window.location.hash.replace(/^#/, '') || '/'
 
 export default function App() {
@@ -19,19 +20,19 @@ export default function App() {
   const back = () => (window.history.length > 1 ? window.history.back() : go('/'))
 
   const co = path.match(/^\/co\/([A-Za-z0-9&-]+)/)
-  const tab = co || path.startsWith('/ledger') ? 'ledger' : path.startsWith('/wires') ? 'wires' : 'brief'
+  const tab = co || /^\/(research|ledger)/.test(path) ? 'research' : /^\/(alerts|wires)/.test(path) ? 'alerts' : 'brief'
 
   return (
     <div className="app">
       {co ? <Dossier symbol={co[1].toUpperCase()} back={back} />
-        : tab === 'ledger' ? <Companies go={go} />
-        : tab === 'wires' ? <Tripwires />
+        : tab === 'research' ? <Companies go={go} />
+        : tab === 'alerts' ? <Tripwires />
         : <Brief go={go} />}
       <nav className="nav" aria-label="Main">
         <div className="nav-inner">
           <button aria-current={tab === 'brief' ? 'page' : undefined} onClick={() => go('/')}>{Icon.brief}Brief</button>
-          <button aria-current={tab === 'ledger' ? 'page' : undefined} onClick={() => go('/ledger')}>{Icon.ledger}Ledger</button>
-          <button aria-current={tab === 'wires' ? 'page' : undefined} onClick={() => go('/wires')}>{Icon.wires}Tripwires</button>
+          <button aria-current={tab === 'research' ? 'page' : undefined} onClick={() => go('/research')}>{Icon.ledger}Research</button>
+          <button aria-current={tab === 'alerts' ? 'page' : undefined} onClick={() => go('/alerts')}>{Icon.wires}Alerts</button>
         </div>
       </nav>
     </div>

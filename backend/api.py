@@ -11,12 +11,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import jobs, llm
+from . import ask, jobs, llm
 from .brief import edition
 from .config import ROOT
 from .db import connect, init_db
 from .financials import vitals
-from .market import delete_rule, rules, save_rule
+from .market import day_stats, delete_rule, rules, save_rule
 
 init_db()
 app = FastAPI(title="FINN")
@@ -49,8 +49,10 @@ def companies():
             headline = L.get("headline")
             for t in L.get("threads", []):
                 tally[t["verdict"]] = tally.get(t["verdict"], 0) + 1
+        last = (day_stats(r["symbol"]) or [{}])[-1]
         out.append({"symbol": r["symbol"], "name": r["name"], "sector": r["sector"], "weight": r["weight"],
-                    "has_ledger": bool(r["ledger"]), "tally": tally, "headline": headline})
+                    "has_ledger": bool(r["ledger"]), "tally": tally, "headline": headline,
+                    "price": last.get("close"), "ret": last.get("ret"), "date": last.get("date")})
     return out
 
 
@@ -62,7 +64,8 @@ def dossier(symbol: str):
     with connect() as c:
         led = c.execute("SELECT data FROM fin_tables WHERE symbol=? AND section='ledger'", (symbol,)).fetchone()
     if led:
-        return {"status": "ready", "vitals": vitals(symbol), "ledger": json.loads(led["data"])}
+        return {"status": "ready", "vitals": vitals(symbol), "ledger": json.loads(led["data"]),
+                "questions": ask.suggestions(symbol)}
     state, error = jobs.status(symbol)
     if state == "error":
         raise HTTPException(404, error)
@@ -73,6 +76,23 @@ def dossier(symbol: str):
     except LookupError:
         partial = None
     return {"status": "building", "vitals": partial}
+
+
+class Question(BaseModel):
+    q: str
+
+
+@app.post("/api/ask/{symbol}")
+def ask_company(symbol: str, body: Question):
+    symbol = symbol.upper().strip()
+    if not _TICKER.match(symbol) or not body.q.strip():
+        raise HTTPException(400, "Ask a question about a valid NSE symbol")
+    try:
+        return ask.ask(symbol, body.q)
+    except LookupError:
+        raise HTTPException(404, "Open the company's research first")
+    except llm.LLMUnavailable:
+        raise HTTPException(503, "The answering model is busy; try again in a moment")
 
 
 class Rule(BaseModel):

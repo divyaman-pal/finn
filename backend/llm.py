@@ -24,8 +24,11 @@ TIERS = {
     "cheap": ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest"],
     "strong": (["claude-opus-5-5"] if ANTHROPIC_API_KEY else [])
               + ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"],
+    # interactive Q&A: fast, cheap, good at staying inside the context it's given
+    "ask": (["claude-haiku-5-5"] if ANTHROPIC_API_KEY else []) + ["gemini-3.5-flash-lite", "gemini-flash-lite-latest"],
 }
-PRICES = {"claude-opus-5-5": (4.00, 20.00), "lite": (0.10, 0.40), "flash": (0.30, 2.50)}
+PRICES = {"claude-opus-5-5": (4.00, 20.00), "claude-haiku-5-5": (0.10, 0.50), "lite": (0.10, 0.40), "flash": (0.30, 2.50)}
+EFFORT = {"claude-opus-5-5": "high", "claude-haiku-5-5": "low"}
 
 _gemini = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 _claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, max_retries=3) if ANTHROPIC_API_KEY else None
@@ -65,8 +68,9 @@ def _strict(schema):
 
 def _call_claude(model, prompt, system, schema):
     kwargs = dict(model=model, max_tokens=16000, messages=[{"role": "user", "content": prompt}],
-                  output_config={"effort": "high"},
-                  betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+                  output_config={"effort": EFFORT.get(model, "medium")})
+    if "opus" in model:  # server-side refusal fallback exists for Opus, not Haiku
+        kwargs |= {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
     if system:
         kwargs["system"] = system
     if schema:

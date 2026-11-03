@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { api, type Edition, type Story } from './api'
 import { Signal, Delta, timeAgo, pct } from './ui'
 import { StorySheet } from './StorySheet'
+import { CompanySearch } from './Search'
 
 const WINDOWS = [{ h: 24, label: '24h' }, { h: 72, label: '3 days' }, { h: 168, label: 'Week' }]
-const WORDS = ['Nothing', 'One thing', 'Two things', 'Three things', 'Four things', 'Five things', 'Six things', 'Seven things', 'Eight things']
+const SPANS: Record<number, string> = { 24: 'the last 24 hours', 72: 'the last 3 days', 168: 'the past week' }
+const WORDS =['Nothing', 'One thing', 'Two things', 'Three things', 'Four things', 'Five things', 'Six things', 'Seven things', 'Eight things']
 
 function readWindow(): number {
   try { return Number(localStorage.getItem('finn.window')) || 24 } catch { return 24 }
@@ -22,8 +24,13 @@ export function Brief({ go }: { go: (path: string) => void }) {
     api.brief(hours).then(setEd).catch(e => setErr(e.message))
   }, [hours])
 
+  const [filter, setFilter] = useState('All')
+  useEffect(() => setFilter('All'), [hours])
+
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
   const n = ed?.counts.matter ?? 0
+  const kinds = [...new Set((ed?.stories || []).map(s => s.label))]
+  const shown = (ed?.stories || []).filter(s => filter === 'All' || s.label === filter)
 
   return (
     <>
@@ -36,11 +43,13 @@ export function Brief({ go }: { go: (path: string) => void }) {
           <>
             <h1>{WORDS[n] ?? `${n} things`} {n === 1 ? 'matters' : 'matter'}<em>.</em></h1>
             <div className="mast-sub">
-              {ed.counts.filed} filed away · {ed.counts.filings} filings across your book in {WINDOWS.find(w => w.h === hours)?.label.replace('24h', 'the last 24 hours') ?? `${hours}h`}
+              {ed.counts.filed} filed away · {ed.counts.filings} filings across your book in {SPANS[hours] ?? `the last ${hours} hours`}
             </div>
           </>
         ) : <div className="skeleton" style={{ height: 70, marginTop: 14 }} />}
       </header>
+
+      <CompanySearch go={go} />
 
       <div className="toolbar">
         <div className="seg" role="group" aria-label="Time window">
@@ -73,8 +82,18 @@ export function Brief({ go }: { go: (path: string) => void }) {
         </div>
       )}
 
-      {ed?.stories.map((s, i) => (
-        <div key={s.id} className={i === 0 ? 'lead' : ''}>
+      {ed && n > 1 && (
+        <div className="filters" role="group" aria-label="Filter stories">
+          {['All', ...kinds].map(k => (
+            <button key={k} className="chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>
+              {k}{k !== 'All' && <span className="muted"> {ed.stories.filter(s => s.label === k).length}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {shown.map((s, i) => (
+        <div key={s.id} className={i === 0 && filter === 'All' ? 'lead' : ''}>
           <StoryCard s={s} onOpen={() => setOpen(s)} />
         </div>
       ))}

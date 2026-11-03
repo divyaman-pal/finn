@@ -21,11 +21,12 @@ The two halves meet in the results card: when results land, FINN shows Revenue /
 - **Triage is routed by cost too.** Rules settle routine paperwork for free; batched one-liners go to the cheap model; only opaque filings ("…informed the Exchange about General Updates") get their PDF's first page read. That peek is what surfaced Asian Paints starting production at Dahej, filed as "Updates".
 - **Primary sources only on the pull side** — transcripts, presentations, filings, standardised financials. I deliberately ignored Screener's own AI concall summaries. Push-side bios use web search, as the brief allows.
 - **Explained moves.** A price/volume tripwire looks back a week for the filing the market was reacting to. Only genuinely unexplained moves are reported as such.
+- **Ask, but on a leash.** Each company page takes questions, answered by Claude Haiku 5.5 using *only* the claims already extracted from that company's calls and the numbers computed from its financials. Every answer carries receipts; when the sources don't cover a question, FINN says so instead of guessing. Suggested questions come from the company's own contested promises. About ₹0.2 per question.
 - **Honest gaps.** ITC holds no earnings calls (FINN falls back to presentations and says so). Maruti files cover letters that link to dead pages — the ledger names which calls it couldn't read rather than guessing.
 
 ## Deliberately left out
 
-Intraday data, news, user accounts, native push notifications, broker integration, chat. Also OCR: scanned results PDFs fall back to the standardised numbers (labelled) rather than a slow OCR pass on a free server.
+Intraday data, news, user accounts, native push notifications, broker integration, open-ended chat (Ask is scoped to one company's sources). Also OCR: scanned results PDFs fall back to the standardised numbers (labelled) rather than a slow OCR pass on a free server.
 
 ## Where I'd take it next
 

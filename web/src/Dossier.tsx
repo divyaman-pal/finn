@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type Claim, type Dossier as D, type Ledger, type Thread, type Verdict, type Vitals } from './api'
+import { api, type Answer, type Claim, type Dossier as D, type Ledger, type Thread, type Verdict, type Vitals } from './api'
 import { Bars, Delta, Icon, Tally, VerdictTag, crore, croreShort, pct } from './ui'
 
 type Tab = 'ledger' | 'vitals' | 'case'
@@ -70,6 +70,8 @@ export function Dossier({ symbol, back }: { symbol: string; back: () => void }) 
             </>
           ) : <p className="muted" style={{ marginTop: 16 }}>{L.note}</p>}
 
+          {L.status === 'ok' && <Ask symbol={symbol} name={v.name} questions={d?.questions || []} />}
+
           <div className="tabs" role="tablist" style={{ marginTop: 14 }}>
             {(['ledger', 'vitals', 'case'] as Tab[]).map(t => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
@@ -84,6 +86,50 @@ export function Dossier({ symbol, back }: { symbol: string; back: () => void }) 
         </>
       )}
     </>
+  )
+}
+
+function Ask({ symbol, name, questions }: { symbol: string; name: string; questions: string[] }) {
+  const [q, setQ] = useState('')
+  const [asked, setAsked] = useState('')
+  const [a, setA] = useState<Answer | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const run = (text: string) => {
+    if (!text.trim() || busy) return
+    setAsked(text); setQ(''); setBusy(true); setErr(''); setA(null)
+    api.ask(symbol, text).then(setA).catch(e => setErr(e.message)).finally(() => setBusy(false))
+  }
+  return (
+    <section className="ask" aria-label={`Ask about ${name}`}>
+      <span className="eyebrow">Ask {name.replace(/ (Ltd|Limited)\.?$/, '')}</span>
+      <div className="chips" style={{ marginTop: 8 }}>
+        {questions.map(s => <button key={s} className="chip" onClick={() => run(s)} disabled={busy}>{s}</button>)}
+      </div>
+      <form onSubmit={e => { e.preventDefault(); run(q) }}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ask about guidance, margins, cash, capex…" aria-label="Your question" />
+        <button type="submit" disabled={busy || !q.trim()}>Ask</button>
+      </form>
+      {(busy || a || err) && (
+        <div className="answer" aria-live="polite">
+          <div className="small muted" style={{ marginBottom: 6 }}>{asked}</div>
+          {busy && <div className="skeleton" style={{ height: 54 }} />}
+          {err && <div className="err" style={{ margin: 0 }}>{err}</div>}
+          {a && (
+            <>
+              <p style={a.answerable ? undefined : { color: 'var(--ink-2)' }}>{a.answer}</p>
+              <div className="ids">
+                {a.cites.map(c => c.kind === 'claim'
+                  ? <a key={c.id} className="receipt" href={`${c.url}#page=${c.page}`} target="_blank" rel="noreferrer" title={c.quote}>
+                      {c.fq} {c.source_kind === 'ppt' ? 'presentation' : 'call'}, p.{c.page}</a>
+                  : <span key={c.id} className="receipt" title={c.text}>reported financials</span>)}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      <div className="small muted" style={{ marginTop: 8 }}>Answers use only this company's own calls and reported numbers, with sources.</div>
+    </section>
   )
 }
 
