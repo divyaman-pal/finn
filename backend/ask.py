@@ -38,7 +38,8 @@ def _numbers(v: dict) -> list[tuple[str, str]]:
     if bs and bs["de"]:
         facts.append(f"Debt to equity {bs['de'][-1]}x ({bs['periods'][-1]}); working-capital days "
                      f"{bs['working_capital_days'][-1]} ({bs['ratio_periods'][-1]})")
-    facts += [f["text"] for f in v["flags"]]
+    # flags restate figures already listed (cash conversion, margin), so add only the ones that are new
+    facts += [f["text"] for f in v["flags"] if not re.search(r"operating cash|Operating margin|Revenue [+-]", f["text"])]
     return [(f"n{i}", f) for i, f in enumerate(facts, 1)]
 
 
