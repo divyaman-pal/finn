@@ -1,6 +1,6 @@
 # FINN — covering note
 
-**Live:** https://finn-REPLACE.onrender.com · **Code:** https://github.com/REPLACE/finn
+**Live:** https://finn-jteu.onrender.com · **Code:** https://github.com/divyaman-pal/finn
 
 ## What I built
 

@@ -2,7 +2,7 @@
 
 A mobile-first agent for a public-markets investor, built for the ENAM Holdings AI Engineer Build Challenge.
 
-**Live:** https://finn-REPLACE.onrender.com — open it on a phone. Free tier: the first load after idle takes ~50 seconds.
+**Live:** https://finn-jteu.onrender.com — open it on a phone. Free tier: the first load after idle takes ~50 seconds.
 
 FINN does two things, and both run on one idea: **management makes promises; FINN checks them.**
 

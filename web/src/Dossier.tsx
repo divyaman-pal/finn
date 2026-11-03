@@ -113,10 +113,16 @@ function LedgerView({ L }: { L: Ledger }) {
   )
 }
 
+/** 'Q3 FY26' -> 2603: fiscal year first, then quarter, so FY27's Q1 follows FY26's Q4. */
+const fqOrder = (fq: string) => {
+  const m = fq.match(/Q(\d)\s*FY(\d{2})/)
+  return m ? Number(m[2]) * 100 + Number(m[1]) : 0
+}
+
 function ThreadRow({ t, L, open, toggle }: { t: Thread; L: Ledger; open: boolean; toggle: () => void }) {
   const items = [...t.promise_ids.map(id => ({ id, promise: true })), ...t.evidence_ids.map(id => ({ id, promise: false }))]
     .map(x => ({ ...x, c: L.claims[x.id] })).filter(x => x.c)
-    .sort((a, b) => a.c.fq.localeCompare(b.c.fq, undefined, { numeric: true }) || Number(b.promise) - Number(a.promise))
+    .sort((a, b) => fqOrder(a.c.fq) - fqOrder(b.c.fq) || Number(b.promise) - Number(a.promise))
   const seen = new Set<string>()
   return (
     <div className="thread" data-open={open}>
