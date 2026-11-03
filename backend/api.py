@@ -4,8 +4,6 @@
 """
 import json
 import re
-import threading
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,12 +11,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import llm
+from . import jobs, llm
 from .brief import edition
 from .config import ROOT
 from .db import connect, init_db
 from .financials import vitals
-from .ledger import build_ledger
 from .market import delete_rule, rules, save_rule
 
 init_db()
@@ -26,7 +23,6 @@ app = FastAPI(title="FINN")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _TICKER = re.compile(r"^[A-Z0-9&\-]{1,20}$")
-_building: dict[str, str] = {}   # symbol -> "running" | "error: ..." for dossiers being built in the background
 
 
 @app.get("/api/health")
@@ -58,26 +54,6 @@ def companies():
     return out
 
 
-def _build(symbol: str) -> None:
-    """Any NSE ticker: fetch its fundamentals and documents, then build the ledger. Runs in the background."""
-    from .sources.filings import ingest_filings
-    from .sources.prices import ingest_prices
-    from .sources.screener import ingest_screener
-    try:
-        with connect() as c:
-            known = c.execute("SELECT 1 FROM companies WHERE symbol=?", (symbol,)).fetchone()
-        if not known:
-            ingest_screener(symbol)
-            ingest_prices(symbol)
-            ingest_filings(symbol)
-        build_ledger(symbol)
-        _building.pop(symbol, None)
-    except LookupError:
-        _building[symbol] = "error: not found on Screener — check the NSE symbol"
-    except Exception as e:
-        _building[symbol] = f"error: {type(e).__name__}: {str(e)[:160]}"
-
-
 @app.get("/api/dossier/{symbol}")
 def dossier(symbol: str):
     symbol = symbol.upper().strip()
@@ -87,13 +63,11 @@ def dossier(symbol: str):
         led = c.execute("SELECT data FROM fin_tables WHERE symbol=? AND section='ledger'", (symbol,)).fetchone()
     if led:
         return {"status": "ready", "vitals": vitals(symbol), "ledger": json.loads(led["data"])}
-    state = _building.get(symbol)
-    if state and state.startswith("error"):
-        _building.pop(symbol, None)
-        raise HTTPException(404, state[7:])
-    if not state:
-        _building[symbol] = "running"
-        threading.Thread(target=_build, args=(symbol,), daemon=True).start()
+    state, error = jobs.status(symbol)
+    if state == "error":
+        raise HTTPException(404, error)
+    if state == "none":
+        jobs.start(symbol)
     try:
         partial = vitals(symbol)
     except LookupError:
