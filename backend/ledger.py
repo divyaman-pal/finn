@@ -14,7 +14,7 @@ from datetime import date, datetime, timezone
 
 from . import llm
 from .db import connect, dumps
-from .docs import fy_label, nse_transcript, pages, pick_calls, stated_quarter
+from .docs import fy_label, nse_transcript, pages, parse_period, pick_calls, stated_quarter
 from .financials import quarterly_actuals
 
 CHUNK_WORDS = 3500
@@ -77,7 +77,7 @@ def _chunks(pgs: list[str]) -> list[str]:
 
 def extract_claims(symbol: str, call: dict) -> list[dict]:
     pgs = pages(call["url"])
-    q = stated_quarter(pgs[:3])
+    q = stated_quarter(pgs[:3], parse_period(call["period"]))
     if q:  # the document knows its own quarter better than the listing date does
         call["quarter"], call["fq"] = q.isoformat(), fy_label(q)
     claims = []

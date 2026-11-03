@@ -35,18 +35,30 @@ def fy_label(q: date) -> str:
     return f"Q{fq} FY{fy % 100:02d}"
 
 
-def stated_quarter(first_pages: list[str]) -> date | None:
-    """Trust the document over the listing date: read 'quarter ended 30th June 2026' or 'Q1 FY2027'."""
-    head = " ".join(first_pages)[:6000]
-    m = re.search(r"quarter\s+(?:and\s+\w+\s+)?ended\s+(?:on\s+)?\d{1,2}(?:st|nd|rd|th)?\s+([A-Z][a-z]+),?\s+(\d{4})", head)
-    if m and m.group(1)[:3] in MONTHS:
-        return date(int(m.group(2)), MONTHS[m.group(1)[:3]], 1)
-    m = re.search(r"Q([1-4])\s*[-' ]?\s*FY\s*'?(20)?(\d{2})", head)
+def stated_quarter(first_pages: list[str], listed: date | None = None) -> date | None:
+    """Trust the document over the listing date: read 'quarter ended 30th June 2026', 'quarter ended June 30,
+    2026', 'Q1 FY2027' or 'Q1 FY2026-27'. With `listed` (the call's listing month), a reading that isn't
+    0-6 months before it is rejected: a mislabelled or misread document shouldn't move a call a year."""
+    head = re.sub(r"\s+", " ", " ".join(first_pages)[:6000])
+    found = None
+    m = re.search(r"quarter (?:and \w+ )?ended (?:on )?(?:\d{1,2}(?:st|nd|rd|th)? ([A-Z][a-z]+),? (\d{4})|"
+                  r"([A-Z][a-z]+) \d{1,2},? (\d{4}))", head)
     if m:
-        fq, fy = int(m.group(1)), 2000 + int(m.group(3))
-        month = {1: 6, 2: 9, 3: 12, 4: 3}[fq]
-        return date(fy - 1 if fq < 4 else fy, month, 1)
-    return None
+        mon, yr = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        if mon[:3] in MONTHS:
+            found = date(int(yr), MONTHS[mon[:3]], 1)
+    if not found:
+        m = re.search(r"Q([1-4]) ?[-' ]? ?FY ?'?(\d{2,4})(?: ?[-–/] ?(\d{2,4}))?", head)
+        if m:
+            fq = int(m.group(1))
+            yr = m.group(3) or m.group(2)  # 'FY2026-27' names the year that ends in 2027
+            fy = int(yr) if len(yr) == 4 else 2000 + int(yr[-2:])
+            found = date(fy - 1 if fq < 4 else fy, {1: 6, 2: 9, 3: 12, 4: 3}[fq], 1)
+    if found and listed:
+        months = (listed.year - found.year) * 12 + listed.month - found.month
+        if not 0 <= months <= 6:
+            return None
+    return found
 
 
 def pick_calls(symbol: str, n: int = 4) -> tuple[str, list[dict]]:
